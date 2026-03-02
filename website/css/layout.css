@@ -76,7 +76,7 @@ img { max-width: 100%; height: auto; }
 
 /* Nav links */
 .sidebar-nav { list-style: none; padding: .75rem 0; flex: 1; }
-.sidebar-nav li a {
+.sidebar-nav a {
     display: flex;
     align-items: center;
     gap: .65rem;
@@ -87,25 +87,25 @@ img { max-width: 100%; height: auto; }
     text-decoration: none;
     border-left: 3px solid transparent;
 }
-.sidebar-nav li a:hover {
+.sidebar-nav a:hover {
     background: rgba(255,255,255,.06);
     color: #fff;
     text-decoration: none;
 }
-.sidebar-nav li a.active {
+.sidebar-nav a.active {
     background: rgba(255,54,33,.1);
     color: #FF3621;
     font-weight: 600;
     border-left-color: #FF3621;
 }
-.sidebar-nav li a .nav-icon {
+.sidebar-nav a .nav-icon {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
     opacity: .7;
 }
-.sidebar-nav li a:hover .nav-icon,
-.sidebar-nav li a.active .nav-icon { opacity: 1; }
+.sidebar-nav a:hover .nav-icon,
+.sidebar-nav a.active .nav-icon { opacity: 1; }
 
 /* Section divider in sidebar */
 .sidebar-section {
@@ -169,6 +169,11 @@ img { max-width: 100%; height: auto; }
     font-weight: 600;
     color: #1B3139;
     margin-bottom: 0;
+}
+.header-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1B3139;
 }
 .header-meta {
     font-size: .8rem;
@@ -733,6 +738,10 @@ table.styled-table tbody tr:hover {
     position: relative;
     overflow: hidden;
 }
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
 .hero-section::before {
     content: "";
     position: absolute;
@@ -1039,6 +1048,24 @@ pre .number { color: #fab387; }
     accent-color: #00A972;
     flex-shrink: 0;
 }
+.checklist li {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem 1rem;
+    background: #fff;
+    border: 1px solid #e8ecf1;
+    border-radius: 8px;
+    font-size: .93rem;
+    color: #333;
+    list-style: none;
+}
+.checklist li input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #00A972;
+    flex-shrink: 0;
+}
 /* Pure CSS checkmark list (no interactive checkbox) */
 .check-list {
     list-style: none;
@@ -1176,6 +1203,41 @@ pre .number { color: #fab387; }
     text-transform: uppercase;
     letter-spacing: .03em;
 }
+
+/* Recommended card variant */
+.card.recommended {
+    border: 2px solid #00A972;
+    position: relative;
+}
+.card.recommended::after {
+    content: "Recommended for enterprise";
+    position: absolute;
+    top: -10px;
+    left: 1.5rem;
+    background: #00A972;
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 600;
+    padding: .15rem .65rem;
+    border-radius: 10px;
+}
+
+/* Migration path flow */
+.migration-path {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid #e0e4ea;
+    border-radius: 10px;
+}
+.migration-path .tag { font-size: .85rem; padding: .4rem 1rem; }
+.migration-path .arrow { color: #FF3621; font-weight: 700; font-size: 1.2rem; }
+
 .comparison-col h3 {
     font-size: 1.05rem;
     font-weight: 600;

@@ -143,7 +143,7 @@
                 <h2 class="section-heading">Security Score Visualization</h2>
                 <p>A radar chart comparing the four deployment models across five key security and operational dimensions. Each axis is scored from 1 (lowest) to 5 (highest).</p>
                 <div class="chart-container">
-                    <h5 class="chart-title">Security Posture Comparison</h5>
+                    <h3 class="chart-title">Security Posture Comparison</h3>
                     <canvas id="securityRadarChart"></canvas>
                 </div>
             </section>
@@ -175,8 +175,7 @@
                         <p class="card-text"><strong>Cons:</strong> NAT Gateway required (small cost), workspace access still public</p>
                     </div>
 
-                    <div class="card" style="border: 2px solid #00A972; position: relative;">
-                        <span class="tag tag-green" style="position: absolute; top: -10px; left: 1.5rem; background: #00A972; color: #fff; font-size: .7rem; padding: .15rem .65rem; border-radius: 10px;">Recommended for enterprise</span>
+                    <div class="card recommended">
                         <h3 class="card-title">VNet Injection + SCC + Private Link</h3>
                         <p class="card-text"><strong>Best for:</strong> Financial services, healthcare, government, maximum isolation</p>
                         <p class="card-text"><strong>Pros:</strong> Complete private access, no public exposure at all, meets strictest compliance</p>
@@ -240,14 +239,14 @@
                 <h2 class="section-heading">Migration Path</h2>
                 <p>Organizations typically adopt a progressive approach, starting with the simplest model and upgrading as security requirements evolve. The path below shows the recommended upgrade sequence.</p>
 
-                <div style="display: flex; align-items: center; justify-content: center; gap: .5rem; flex-wrap: wrap; margin: 2rem 0; padding: 1.5rem; background: #fff; border: 1px solid #e0e4ea; border-radius: 10px;">
-                    <span class="tag tag-teal" style="font-size: .85rem; padding: .4rem 1rem;">Default</span>
-                    <span style="color: #FF3621; font-weight: 700; font-size: 1.2rem;">&rarr;</span>
-                    <span class="tag tag-teal" style="font-size: .85rem; padding: .4rem 1rem;">VNet Injection</span>
-                    <span style="color: #FF3621; font-weight: 700; font-size: 1.2rem;">&rarr;</span>
-                    <span class="tag tag-primary" style="font-size: .85rem; padding: .4rem 1rem;">SCC</span>
-                    <span style="color: #FF3621; font-weight: 700; font-size: 1.2rem;">&rarr;</span>
-                    <span class="tag tag-green" style="font-size: .85rem; padding: .4rem 1rem;">Private Link</span>
+                <div class="migration-path">
+                    <span class="tag tag-teal">Default</span>
+                    <span class="arrow">&rarr;</span>
+                    <span class="tag tag-teal">VNet Injection</span>
+                    <span class="arrow">&rarr;</span>
+                    <span class="tag tag-primary">SCC</span>
+                    <span class="arrow">&rarr;</span>
+                    <span class="tag tag-green">Private Link</span>
                 </div>
 
                 <div class="timeline">
