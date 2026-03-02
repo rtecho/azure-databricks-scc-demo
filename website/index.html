@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home — Azure Databricks SCC Demo</title>
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>Databricks SCC</h2>
+            <span>Secure Cluster Connectivity</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="active">Home</a>
+            <a href="why-scc.html">Why SCC</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="network-design.html">Network Design</a>
+            <a href="deployment-guide.html">Deployment Guide</a>
+            <a href="comparison.html">Comparison</a>
+        </nav>
+        <div class="sidebar-footer">
+            <p>Azure Databricks Demo</p>
+        </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="site-header">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">&#9776;</button>
+            <span class="header-title">Home</span>
+        </header>
+
+        <main class="content">
+
+            <!-- Hero Section -->
+            <section class="hero">
+                <div class="hero-content">
+                    <h1>Azure Databricks Secure Cluster Connectivity</h1>
+                    <p class="tagline">Enterprise-grade network security with zero public IP exposure for your data analytics workloads</p>
+                    <span class="badge">No Public IP / NPIP</span>
+                    <div class="hero-actions">
+                        <a href="architecture.html" class="btn btn-primary">Explore Architecture</a>
+                        <a href="deployment-guide.html" class="btn btn-secondary">Deploy Now</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats Grid -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value">Zero</span>
+                    <span class="stat-label">Public IPs on cluster nodes</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">Port 443</span>
+                    <span class="stat-label">Single outbound port for relay</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">100%</span>
+                    <span class="stat-label">Traffic on Azure backbone</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">Premium</span>
+                    <span class="stat-label">Tier required for full features</span>
+                </div>
+            </section>
+
+            <!-- What is Secure Cluster Connectivity -->
+            <section class="section">
+                <h2>What is Secure Cluster Connectivity?</h2>
+                <p>
+                    Secure Cluster Connectivity (SCC), also known as <strong>No Public IP (NPIP)</strong>,
+                    is an Azure Databricks deployment model that eliminates public IP addresses from
+                    cluster nodes in the compute plane.
+                </p>
+                <p>
+                    When SCC is enabled, cluster nodes have no public IP addresses. Instead, clusters
+                    initiate outbound connections to the Databricks control plane via a <strong>secure
+                    relay on port 443 (HTTPS)</strong>. The control plane never initiates inbound
+                    connections to the compute plane — all communication flows outbound from the
+                    customer's network.
+                </p>
+                <p>
+                    All traffic stays on the <strong>Microsoft Azure network backbone</strong>, meaning
+                    data never traverses the public internet. This architecture dramatically reduces
+                    the attack surface while simplifying network security rules.
+                </p>
+                <p>
+                    Starting with API version <strong>2024-05-01</strong> and later, Secure Cluster
+                    Connectivity is the default for all new Azure Databricks workspaces.
+                </p>
+            </section>
+
+            <!-- Key Concepts -->
+            <section class="section">
+                <h2>Key Concepts</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>Control Plane</h3>
+                        <p>
+                            Managed by Databricks in the Databricks-managed subscription. The control
+                            plane hosts the web application, REST API, cluster management, and job
+                            scheduling services. Customers access it via the workspace URL.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3>Classic Compute Plane</h3>
+                        <p>
+                            Runs in the customer's Azure subscription (or a managed VNet). The compute
+                            plane contains the actual Spark clusters (VMs) and DBFS storage. With VNet
+                            injection, clusters run inside the customer's own virtual network.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3>Secure Relay</h3>
+                        <p>
+                            The SCC relay is the tunnel between the compute and control planes. Clusters
+                            initiate outbound HTTPS (port 443) connections to the relay endpoint. The
+                            control plane sends management commands through this tunnel. No inbound
+                            ports are needed on the compute side.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How SCC Works -->
+            <section class="section">
+                <h2>How SCC Works</h2>
+                <ol class="steps-list">
+                    <li>Workspace is created with <code>enableNoPublicIp = true</code></li>
+                    <li>Cluster node VMs are provisioned without public IP addresses</li>
+                    <li>Each cluster initiates an outbound HTTPS connection to the SCC relay endpoint</li>
+                    <li>The control plane sends management commands through this secure tunnel</li>
+                    <li>All network traffic traverses the Microsoft Azure backbone — never the public internet</li>
+                </ol>
+            </section>
+
+            <!-- Highlight Box -->
+            <div class="highlight-box highlight-green">
+                <p>
+                    With Secure Cluster Connectivity enabled, there are no open inbound ports on your
+                    compute nodes and no public IP addresses. This significantly reduces your attack surface.
+                </p>
+            </div>
+
+        </main>
+
+        <footer class="site-footer">
+            <p>&copy; 2025 Azure Databricks SCC Demo. Built for customer demonstrations.</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

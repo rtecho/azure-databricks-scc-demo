@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspaceName": {
+      "value": "dbw-scc-demo"
+    },
+    "pricingTier": {
+      "value": "premium"
+    },
+    "enableNoPublicIp": {
+      "value": true
+    },
+    "vnetAddressPrefix": {
+      "value": "10.0.0.0/16"
+    },
+    "hostSubnetPrefix": {
+      "value": "10.0.1.0/24"
+    },
+    "containerSubnetPrefix": {
+      "value": "10.0.2.0/24"
+    },
+    "privateEndpointSubnetPrefix": {
+      "value": "10.0.3.0/24"
+    },
+    "resourcePrefix": {
+      "value": "dbwscc"
+    }
+  }
+}

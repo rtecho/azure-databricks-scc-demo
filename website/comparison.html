@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparison — Azure Databricks SCC Demo</title>
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>Databricks SCC</h2>
+            <span>Secure Cluster Connectivity</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html">Home</a>
+            <a href="why-scc.html">Why SCC</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="network-design.html">Network Design</a>
+            <a href="deployment-guide.html">Deployment Guide</a>
+            <a href="comparison.html" class="active">Comparison</a>
+        </nav>
+        <div class="sidebar-footer"><p>Azure Databricks Demo</p></div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="site-header">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">&#9776;</button>
+            <span class="header-title">Comparison</span>
+        </header>
+
+        <main class="content">
+
+            <!-- 1. Hero Section -->
+            <section class="hero-section">
+                <h1 class="hero-heading">Deployment Models Compared</h1>
+                <p class="hero-tagline">Choose the right network security posture for your Azure Databricks workloads</p>
+            </section>
+
+            <!-- 2. Quick Comparison Table -->
+            <section class="content-section">
+                <h2 class="section-heading">Quick Comparison Table</h2>
+                <p>A side-by-side overview of the four Azure Databricks deployment models and their network security characteristics.</p>
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Default (Managed VNet)</th>
+                                <th>VNet Injection</th>
+                                <th>VNet Injection + SCC</th>
+                                <th>VNet Injection + SCC + Private Link</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Network Control</strong></td>
+                                <td>None (Azure-managed)</td>
+                                <td>Full VNet control</td>
+                                <td>Full VNet control</td>
+                                <td>Full VNet control</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Public IPs on Nodes</strong></td>
+                                <td>Yes</td>
+                                <td>Yes</td>
+                                <td>No</td>
+                                <td>No</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Inbound Ports</strong></td>
+                                <td>Managed by Azure</td>
+                                <td>22, 5557 open</td>
+                                <td>None</td>
+                                <td>None</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Custom NSG Rules</strong></td>
+                                <td>No</td>
+                                <td>Yes (additive)</td>
+                                <td>Yes (additive)</td>
+                                <td>Yes (additive)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>On-premises Access</strong></td>
+                                <td>No</td>
+                                <td>Yes (via UDR/VPN)</td>
+                                <td>Yes (via UDR/VPN)</td>
+                                <td>Yes (via UDR/VPN)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Workspace Access</strong></td>
+                                <td>Public</td>
+                                <td>Public</td>
+                                <td>Public</td>
+                                <td>Private only</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Egress Control</strong></td>
+                                <td>Azure-managed</td>
+                                <td>Custom (UDR/NVA)</td>
+                                <td>NAT Gateway</td>
+                                <td>NAT Gateway</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Private Endpoint Support</strong></td>
+                                <td>No</td>
+                                <td>No</td>
+                                <td>Optional</td>
+                                <td>Required</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Pricing Tier Required</strong></td>
+                                <td>Any</td>
+                                <td>Any</td>
+                                <td>Any (Premium for PL)</td>
+                                <td>Premium</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Compliance Level</strong></td>
+                                <td>Basic</td>
+                                <td>Moderate</td>
+                                <td>High</td>
+                                <td>Maximum</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Setup Complexity</strong></td>
+                                <td>Low</td>
+                                <td>Medium</td>
+                                <td>Medium</td>
+                                <td>High</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. Security Score Visualization -->
+            <section class="content-section">
+                <h2 class="section-heading">Security Score Visualization</h2>
+                <p>A radar chart comparing the four deployment models across five key security and operational dimensions. Each axis is scored from 1 (lowest) to 5 (highest).</p>
+                <div class="chart-container">
+                    <h5 class="chart-title">Security Posture Comparison</h5>
+                    <canvas id="securityRadarChart"></canvas>
+                </div>
+            </section>
+
+            <!-- 4. When to Use Each -->
+            <section class="content-section">
+                <h2 class="section-heading">When to Use Each</h2>
+                <p>Select the deployment model that best matches your organization's security requirements, compliance needs, and operational capacity.</p>
+                <div class="card-grid-2col">
+
+                    <div class="card">
+                        <h3 class="card-title">Default (Managed VNet)</h3>
+                        <p class="card-text"><strong>Best for:</strong> Dev/test, non-sensitive data, quick demos</p>
+                        <p class="card-text"><strong>Pros:</strong> Zero setup, fully managed</p>
+                        <p class="card-text"><strong>Cons:</strong> No network control, public IPs exposed, no compliance features</p>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">VNet Injection</h3>
+                        <p class="card-text"><strong>Best for:</strong> Organizations needing on-premises connectivity, custom DNS, traffic inspection</p>
+                        <p class="card-text"><strong>Pros:</strong> Full VNet control, UDR support, service endpoints</p>
+                        <p class="card-text"><strong>Cons:</strong> Public IPs still assigned, inbound ports 22/5557 open</p>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">VNet Injection + SCC</h3>
+                        <p class="card-text"><strong>Best for:</strong> Production workloads, regulated industries, security-conscious organizations</p>
+                        <p class="card-text"><strong>Pros:</strong> No public IPs, no inbound ports, relay-based secure tunnel</p>
+                        <p class="card-text"><strong>Cons:</strong> NAT Gateway required (small cost), workspace access still public</p>
+                    </div>
+
+                    <div class="card" style="border: 2px solid #00A972; position: relative;">
+                        <span class="tag tag-green" style="position: absolute; top: -10px; left: 1.5rem; background: #00A972; color: #fff; font-size: .7rem; padding: .15rem .65rem; border-radius: 10px;">Recommended for enterprise</span>
+                        <h3 class="card-title">VNet Injection + SCC + Private Link</h3>
+                        <p class="card-text"><strong>Best for:</strong> Financial services, healthcare, government, maximum isolation</p>
+                        <p class="card-text"><strong>Pros:</strong> Complete private access, no public exposure at all, meets strictest compliance</p>
+                        <p class="card-text"><strong>Cons:</strong> Most complex setup, Private Link per-endpoint cost, DNS complexity</p>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- 5. Cost Considerations -->
+            <section class="content-section">
+                <h2 class="section-heading">Cost Considerations</h2>
+                <p>Beyond the Databricks workspace cost itself, each deployment model may require additional Azure infrastructure components. The table below summarizes estimated monthly costs for these supporting resources.</p>
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Monthly Cost (est.)</th>
+                                <th>Required By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>NAT Gateway</strong></td>
+                                <td>~$32/month + data processing</td>
+                                <td>SCC + VNet Injection</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Public IP (Standard)</strong></td>
+                                <td>~$3.65/month</td>
+                                <td>NAT Gateway</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Private Endpoint</strong></td>
+                                <td>~$7.30/month each</td>
+                                <td>Private Link</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Private DNS Zone</strong></td>
+                                <td>~$0.50/month</td>
+                                <td>Private Link</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Databricks Premium</strong></td>
+                                <td>Tier pricing varies</td>
+                                <td>Private Link</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="highlight-box-blue">
+                    <p>
+                        SCC itself has no additional licensing cost. The costs above are for the supporting Azure infrastructure components.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 6. Migration Path -->
+            <section class="content-section">
+                <h2 class="section-heading">Migration Path</h2>
+                <p>Organizations typically adopt a progressive approach, starting with the simplest model and upgrading as security requirements evolve. The path below shows the recommended upgrade sequence.</p>
+
+                <div style="display: flex; align-items: center; justify-content: center; gap: .5rem; flex-wrap: wrap; margin: 2rem 0; padding: 1.5rem; background: #fff; border: 1px solid #e0e4ea; border-radius: 10px;">
+                    <span class="tag tag-teal" style="font-size: .85rem; padding: .4rem 1rem;">Default</span>
+                    <span style="color: #FF3621; font-weight: 700; font-size: 1.2rem;">&rarr;</span>
+                    <span class="tag tag-teal" style="font-size: .85rem; padding: .4rem 1rem;">VNet Injection</span>
+                    <span style="color: #FF3621; font-weight: 700; font-size: 1.2rem;">&rarr;</span>
+                    <span class="tag tag-primary" style="font-size: .85rem; padding: .4rem 1rem;">SCC</span>
+                    <span style="color: #FF3621; font-weight: 700; font-size: 1.2rem;">&rarr;</span>
+                    <span class="tag tag-green" style="font-size: .85rem; padding: .4rem 1rem;">Private Link</span>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h4>Default &rarr; VNet Injection</h4>
+                        <p>Deploy a new workspace with a custom VNet. This transition requires creating a new workspace or re-creating the existing one, as VNet injection cannot be enabled on an already-deployed default workspace. Plan for data and notebook migration.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>VNet Injection &rarr; SCC</h4>
+                        <p>Set <code>enableNoPublicIp = true</code> in the workspace properties. This is an in-place upgrade that takes approximately 15 minutes of downtime. Ensure a NAT Gateway is attached to both subnets before enabling. All running clusters must be terminated first.</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h4>SCC &rarr; Private Link</h4>
+                        <p>Add private endpoints for the workspace (front-end and back-end), configure private DNS zones (<code>privatelink.azuredatabricks.net</code>), and set <code>publicNetworkAccess = Disabled</code>. This is the most involved transition and requires careful DNS planning, especially in hub-spoke network topologies.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. CTA Section -->
+            <section class="cta-section">
+                <h2>Ready to deploy?</h2>
+                <p>Choose your deployment model and follow our step-by-step guide to get started with secure Azure Databricks.</p>
+                <div class="cta-buttons">
+                    <a href="deployment-guide.html" class="btn btn-primary btn-lg">Deployment Guide</a>
+                    <a href="architecture.html" class="btn btn-secondary btn-lg">View Architecture</a>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="site-footer">
+            <p>&copy; 2025 Azure Databricks SCC Demo. Built for customer demonstrations.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Security Score Radar Chart — comparing 4 deployment models across 5 axes
+        const ctx = document.getElementById('securityRadarChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Network Isolation',
+                    'Access Control',
+                    'Compliance',
+                    'Egress Control',
+                    'Operational Simplicity'
+                ],
+                datasets: [
+                    {
+                        label: 'Default (Managed VNet)',
+                        data: [1, 1, 1, 1, 5],
+                        backgroundColor: 'rgba(156, 163, 175, 0.15)',
+                        borderColor: 'rgba(156, 163, 175, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(156, 163, 175, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(156, 163, 175, 1)'
+                    },
+                    {
+                        label: 'VNet Injection',
+                        data: [3, 2, 2, 3, 3],
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
+                    },
+                    {
+                        label: 'VNet Injection + SCC',
+                        data: [4, 3, 4, 4, 3],
+                        backgroundColor: 'rgba(255, 54, 33, 0.15)',
+                        borderColor: 'rgba(255, 54, 33, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(255, 54, 33, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(255, 54, 33, 1)'
+                    },
+                    {
+                        label: 'VNet Injection + SCC + Private Link',
+                        data: [5, 5, 5, 5, 2],
+                        backgroundColor: 'rgba(0, 169, 114, 0.15)',
+                        borderColor: 'rgba(0, 169, 114, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(0, 169, 114, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(0, 169, 114, 1)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 5,
+                        ticks: {
+                            stepSize: 1,
+                            font: { size: 11 },
+                            backdropColor: 'transparent'
+                        },
+                        pointLabels: {
+                            font: { size: 12, weight: '600' },
+                            color: '#1B3139'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.08)'
+                        },
+                        angleLines: {
+                            color: 'rgba(0, 0, 0, 0.08)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.raw + '/5';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

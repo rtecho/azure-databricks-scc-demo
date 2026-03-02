@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Guide — Azure Databricks SCC Demo</title>
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>Databricks SCC</h2>
+            <span>Secure Cluster Connectivity</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html">Home</a>
+            <a href="why-scc.html">Why SCC</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="network-design.html">Network Design</a>
+            <a href="deployment-guide.html" class="active">Deployment Guide</a>
+            <a href="comparison.html">Comparison</a>
+        </nav>
+        <div class="sidebar-footer"><p>Azure Databricks Demo</p></div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="site-header">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">&#9776;</button>
+            <span class="header-title">Deployment Guide</span>
+        </header>
+
+        <main class="content">
+
+            <!-- 1. Hero Section -->
+            <section class="hero-section">
+                <h1 class="hero-heading">Deployment Guide</h1>
+                <p class="hero-tagline">Step-by-step instructions to deploy Azure Databricks with Secure Cluster Connectivity</p>
+            </section>
+
+            <!-- 2. Prerequisites -->
+            <section class="content-section">
+                <h2 class="section-heading">Prerequisites</h2>
+                <p>Before deploying, ensure the following requirements are met.</p>
+                <ul class="checklist">
+                    <li><input type="checkbox" disabled> Azure subscription with <strong>Contributor</strong> role</li>
+                    <li><input type="checkbox" disabled> Azure CLI <strong>2.50+</strong> with Bicep extension</li>
+                    <li><input type="checkbox" disabled> Resource provider registered: <code>Microsoft.Databricks</code></li>
+                    <li><input type="checkbox" disabled> <strong>Premium</strong> tier selected (required for Private Link features)</li>
+                    <li><input type="checkbox" disabled> VNet planning completed (CIDR ranges decided)</li>
+                </ul>
+            </section>
+
+            <!-- 3. Option 1: Deploy via Azure Portal -->
+            <section class="content-section">
+                <h2 class="section-heading">Option 1: Deploy via Azure Portal</h2>
+                <p>Follow these steps to deploy through the Azure portal UI.</p>
+                <ol class="steps-list">
+                    <li>
+                        <strong>Step 1 &mdash; Create Resource Group</strong>
+                        <p>Navigate to the Azure portal and create a new resource group in your target region. Use a clear naming convention such as <code>rg-databricks-scc-demo</code>.</p>
+                    </li>
+                    <li>
+                        <strong>Step 2 &mdash; Create Azure Databricks Workspace</strong>
+                        <ul>
+                            <li>Search <strong>"Azure Databricks"</strong> in the portal marketplace</li>
+                            <li>Select the <strong>Premium</strong> pricing tier</li>
+                            <li>On the <strong>Networking</strong> tab: set <em>"Deploy with Secure Cluster Connectivity (No Public IP)"</em> to <strong>Yes</strong> (this is the default)</li>
+                            <li>Select <strong>"Use your own VNet"</strong> for VNet injection</li>
+                            <li>Configure the <strong>host subnet</strong> and <strong>container subnet</strong> (minimum /26 each, delegated to <code>Microsoft.Databricks/workspaces</code>)</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Step 3 &mdash; Verify Deployment</strong>
+                        <ul>
+                            <li>Check the workspace is in <strong>Active</strong> state in the Azure portal</li>
+                            <li>Launch the workspace and create a test cluster</li>
+                            <li>Verify the VM has <strong>no public IP</strong> in the managed resource group</li>
+                        </ul>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- 4. Option 2: Deploy via Azure CLI -->
+            <section class="content-section">
+                <h2 class="section-heading">Option 2: Deploy via Azure CLI</h2>
+                <p>Use the Azure CLI to deploy programmatically. This approach is ideal for repeatable deployments and CI/CD pipelines.</p>
+                <pre><code># Register provider
+az provider register --namespace Microsoft.Databricks
+
+# Create resource group
+az group create --name rg-databricks-scc-demo --location southeastasia
+
+# Deploy using Bicep template
+az deployment group create \
+  --resource-group rg-databricks-scc-demo \
+  --template-file infra/main.bicep \
+  --parameters infra/main.parameters.json</code></pre>
+            </section>
+
+            <!-- 5. Option 3: Deploy via Bicep Template -->
+            <section class="content-section">
+                <h2 class="section-heading">Option 3: Deploy via Bicep Template</h2>
+                <p>For infrastructure-as-code deployments, use the Bicep template directly. The key resource configuration for the Databricks workspace with SCC enabled is shown below.</p>
+                <pre><code>resource workspace 'Microsoft.Databricks/workspaces@2024-05-01' = {
+  name: workspaceName
+  location: location
+  sku: { name: 'premium' }
+  properties: {
+    managedResourceGroupId: managedRgId
+    publicNetworkAccess: 'Enabled'
+    requiredNsgRules: 'AllRules'
+    parameters: {
+      enableNoPublicIp: { value: true }
+      customVirtualNetworkId: { value: vnet.id }
+      customPublicSubnetName: { value: 'snet-host' }
+      customPrivateSubnetName: { value: 'snet-container' }
+    }
+  }
+}</code></pre>
+                <div class="highlight-box highlight-green">
+                    <p>
+                        The critical parameter is <code>enableNoPublicIp: { value: true }</code>. This single setting activates Secure Cluster Connectivity, ensuring all cluster nodes are provisioned without public IP addresses.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 6. Verification Checklist -->
+            <section class="content-section">
+                <h2 class="section-heading">Verification Checklist</h2>
+                <p>After deployment completes, walk through each verification step to confirm SCC is properly configured.</p>
+                <ul class="checklist">
+                    <li><input type="checkbox" disabled> Workspace shows <strong>"Active"</strong> state in Azure portal</li>
+                    <li><input type="checkbox" disabled> Workspace URL is accessible: <code>https://adb-{workspace-id}.azuredatabricks.net</code></li>
+                    <li><input type="checkbox" disabled> Create a test cluster (2 nodes)</li>
+                    <li><input type="checkbox" disabled> In managed resource group, check VM has <strong>no Public IP</strong></li>
+                    <li><input type="checkbox" disabled> In VNet, verify NSG rules are auto-provisioned</li>
+                    <li><input type="checkbox" disabled> Verify subnet delegation shows <code>Microsoft.Databricks/workspaces</code></li>
+                    <li><input type="checkbox" disabled> NAT Gateway shows associated with both subnets</li>
+                    <li><input type="checkbox" disabled> Test cluster runs a simple notebook: <code>spark.range(100).count()</code></li>
+                </ul>
+            </section>
+
+            <!-- 7. Upgrade Existing Workspace -->
+            <section class="content-section">
+                <h2 class="section-heading">Upgrade Existing Workspace</h2>
+                <p>You can enable Secure Cluster Connectivity on an existing Azure Databricks workspace without recreating it. Follow the steps below carefully.</p>
+                <ol class="steps-list">
+                    <li>
+                        <strong>Stop all compute resources first</strong>
+                        <p>Terminate all running clusters, jobs, and SQL warehouses before making network changes.</p>
+                    </li>
+                    <li>
+                        <strong>Via Azure Portal</strong>
+                        <p>Navigate to your workspace resource &rarr; <strong>Settings</strong> &rarr; <strong>Networking</strong> &rarr; Enable <strong>Secure Cluster Connectivity (No Public IP)</strong>.</p>
+                    </li>
+                    <li>
+                        <strong>Via ARM Template</strong>
+                        <p>Set <code>enableNoPublicIp</code> to <code>true</code> in the workspace properties and redeploy.</p>
+                    </li>
+                    <li>
+                        <strong>Via Terraform</strong>
+                        <p>Set <code>no_public_ip = true</code> in the <code>custom_parameters</code> block (requires <code>azurerm</code> provider version <strong>3.41.0+</strong>).</p>
+                    </li>
+                </ol>
+
+                <div class="highlight-box-blue">
+                    <p>
+                        The network update takes approximately <strong>15 minutes</strong> to propagate. During this time, new clusters cannot be started. Temporary rollback is possible by setting <code>enableNoPublicIp</code> back to <code>false</code>.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 8. Troubleshooting -->
+            <section class="content-section">
+                <h2 class="section-heading">Troubleshooting</h2>
+                <p>Common issues encountered when deploying or enabling SCC, and how to resolve them.</p>
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Issue</th>
+                                <th>Cause &amp; Resolution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Cluster fails to start after enabling SCC</strong></td>
+                                <td>
+                                    Check that NSG rules have not been manually modified. Databricks auto-provisions required NSG rules on both subnets — manual edits can break relay connectivity. Also verify that service endpoints for <code>Microsoft.Storage</code> and <code>Microsoft.Sql</code> are configured on both subnets.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cannot reach external services</strong></td>
+                                <td>
+                                    Ensure a NAT Gateway is properly associated with <strong>both</strong> the host subnet and the container subnet. Without a NAT Gateway (or other explicit outbound method), cluster nodes have no path to the internet for package downloads, PyPI, or external APIs.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Subnet delegation error</strong></td>
+                                <td>
+                                    Both subnets must be <strong>exclusively</strong> delegated to <code>Microsoft.Databricks/workspaces</code>. They cannot be shared with other Azure services (e.g., App Service, Container Instances). Create dedicated subnets for Databricks.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Private endpoint DNS resolution fails</strong></td>
+                                <td>
+                                    Configure private DNS zones for <code>privatelink.azuredatabricks.net</code> and link them to your VNet. If using custom DNS servers, add conditional forwarders for the <code>azuredatabricks.net</code> zone pointing to Azure DNS (168.63.129.16).
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 9. Cleanup -->
+            <section class="content-section">
+                <h2 class="section-heading">Cleanup</h2>
+                <p>When you are finished with the demo, delete the resource group to remove all deployed resources and stop incurring charges.</p>
+                <pre><code>az group delete --name rg-databricks-scc-demo --yes --no-wait</code></pre>
+                <div class="highlight-box">
+                    <p>
+                        This command deletes the resource group and all resources within it, including the Databricks workspace, the managed resource group, VNet, NAT Gateway, and any associated resources. The <code>--no-wait</code> flag returns immediately while deletion proceeds in the background.
+                    </p>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="site-footer">
+            <p>&copy; 2025 Azure Databricks SCC Demo. Built for customer demonstrations.</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Claude temp files
+tmpclaude-*
+nul
+.claude/
+
+# Python
+*.pyc
+__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+infra/main.json

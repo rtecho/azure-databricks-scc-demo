@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Design — Azure Databricks SCC Demo</title>
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>Databricks SCC</h2>
+            <span>Secure Cluster Connectivity</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html">Home</a>
+            <a href="why-scc.html">Why SCC</a>
+            <a href="architecture.html">Architecture</a>
+            <a href="network-design.html" class="active">Network Design</a>
+            <a href="deployment-guide.html">Deployment Guide</a>
+            <a href="comparison.html">Comparison</a>
+        </nav>
+        <div class="sidebar-footer"><p>Azure Databricks Demo</p></div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="site-header">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">&#9776;</button>
+            <span class="header-title">Network Design</span>
+        </header>
+
+        <main class="content">
+
+            <!-- 1. Hero Section -->
+            <section class="hero-section">
+                <h1 class="hero-heading">Network Design &amp; Configuration</h1>
+                <p class="hero-tagline">VNet injection, NSG rules, private endpoints, and egress control</p>
+            </section>
+
+            <!-- 2. VNet Injection Overview -->
+            <section class="content-section">
+                <h2 class="section-heading">VNet Injection Overview</h2>
+                <p>
+                    VNet injection deploys Azure Databricks compute resources directly into the customer's own
+                    Azure Virtual Network. Rather than running clusters in a Databricks-managed VNet, your
+                    Spark driver and executor VMs are placed in subnets you control, giving you full visibility
+                    and governance over network traffic.
+                </p>
+                <p>
+                    This model enables you to apply your own network security policies, use service endpoints
+                    and private endpoints, route traffic through firewalls or NVAs, and peer with other VNets
+                    in your organization.
+                </p>
+
+                <h3 class="subsection">Requirements</h3>
+                <ul>
+                    <li>The VNet and Databricks workspace <strong>must be in the same Azure region and subscription</strong>.</li>
+                    <li>VNet address space must be between <code>/16</code> and <code>/24</code> CIDR.</li>
+                    <li><strong>Two dedicated subnets</strong> are required &mdash; they cannot be shared with other workspaces or any other Azure resources.</li>
+                    <li>Both subnets must be delegated to <code>Microsoft.Databricks/workspaces</code>.</li>
+                    <li>Minimum subnet size: <code>/26</code> (Databricks does not recommend smaller than /26).</li>
+                </ul>
+            </section>
+
+            <!-- 3. Subnet Planning -->
+            <section class="content-section">
+                <h2 class="section-heading">Subnet Planning</h2>
+                <p>
+                    Plan your subnet layout carefully before deployment. Each Databricks workspace requires its own
+                    pair of dedicated subnets. The following table shows the standard naming conventions and purposes.
+                </p>
+
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Subnet</th>
+                                <th>Name Convention</th>
+                                <th>CIDR</th>
+                                <th>Purpose</th>
+                                <th>Delegation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Host (Public)</strong></td>
+                                <td><code>snet-dbw-host</code></td>
+                                <td>/24 or /26</td>
+                                <td>Hosts cluster node VMs</td>
+                                <td><code>Microsoft.Databricks/workspaces</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Container (Private)</strong></td>
+                                <td><code>snet-dbw-container</code></td>
+                                <td>/24 or /26</td>
+                                <td>Container networking for Spark executors</td>
+                                <td><code>Microsoft.Databricks/workspaces</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Private Endpoint</strong></td>
+                                <td><code>snet-dbw-pe</code></td>
+                                <td>/27</td>
+                                <td>Private endpoints (front-end, back-end)</td>
+                                <td>None</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="callout-box">
+                    <h3 class="callout-title">Plan Carefully &mdash; Subnets Cannot Be Resized</h3>
+                    <p>
+                        Subnet CIDR ranges <strong>cannot be changed after deployment</strong>. Plan carefully!
+                        Azure reserves 5 IPs per subnet. Each cluster node needs 1 IP in the host subnet +
+                        1 IP in the container subnet.
+                    </p>
+                </div>
+
+                <h3 class="subsection">Address Space Guidance</h3>
+                <p>Use this table to estimate maximum cluster capacity based on your chosen subnet size.</p>
+
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Subnet CIDR</th>
+                                <th>Available IPs</th>
+                                <th>Max Cluster Nodes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>/26</code></td>
+                                <td class="num">59</td>
+                                <td class="num">59</td>
+                            </tr>
+                            <tr>
+                                <td><code>/25</code></td>
+                                <td class="num">123</td>
+                                <td class="num">123</td>
+                            </tr>
+                            <tr>
+                                <td><code>/24</code></td>
+                                <td class="num">251</td>
+                                <td class="num">251</td>
+                            </tr>
+                            <tr>
+                                <td><code>/23</code></td>
+                                <td class="num">507</td>
+                                <td class="num">507</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. NSG Rules for SCC -->
+            <section class="content-section">
+                <h2 class="section-heading">NSG Rules for SCC</h2>
+                <p>
+                    Azure Databricks automatically provisions and manages Network Security Group (NSG) rules
+                    via subnet delegation. These rules are <strong>required for the service to function</strong>.
+                    Do <strong>NOT</strong> modify or delete the auto-provisioned rules.
+                </p>
+                <p>
+                    With Secure Cluster Connectivity enabled, there are <strong>no inbound rules</strong> for
+                    ports 22 or 5557. Those inbound rules only exist when SCC is <em>disabled</em> (legacy mode).
+                    The control plane communicates through the outbound relay tunnel instead.
+                </p>
+
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Direction</th>
+                                <th>Protocol</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Ports</th>
+                                <th>Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Inbound</strong></td>
+                                <td>Any</td>
+                                <td>VirtualNetwork</td>
+                                <td>VirtualNetwork</td>
+                                <td>Any</td>
+                                <td>Default internal</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Outbound</strong></td>
+                                <td>TCP</td>
+                                <td>VirtualNetwork</td>
+                                <td>AzureDatabricks</td>
+                                <td>443, 3306, 8443-8451</td>
+                                <td>Control plane + relay</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Outbound</strong></td>
+                                <td>TCP</td>
+                                <td>VirtualNetwork</td>
+                                <td>Sql</td>
+                                <td>3306</td>
+                                <td>Metastore, system tables</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Outbound</strong></td>
+                                <td>TCP</td>
+                                <td>VirtualNetwork</td>
+                                <td>Storage</td>
+                                <td>443</td>
+                                <td>DBFS, artifact store</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Outbound</strong></td>
+                                <td>Any</td>
+                                <td>VirtualNetwork</td>
+                                <td>VirtualNetwork</td>
+                                <td>Any</td>
+                                <td>Internal cluster traffic</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Outbound</strong></td>
+                                <td>TCP</td>
+                                <td>VirtualNetwork</td>
+                                <td>EventHub</td>
+                                <td>9093</td>
+                                <td>Structured streaming, logs</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="highlight-box-green">
+                    <h3 class="highlight-title">SCC Eliminates Inbound Control Plane Ports</h3>
+                    <p>
+                        Notice: With SCC enabled, there are <strong>NO</strong> inbound rules from the
+                        AzureDatabricks service tag on ports 22 or 5557. The control plane uses the
+                        outbound relay tunnel instead.
+                    </p>
+                </div>
+
+                <div class="highlight-box-red">
+                    <h3 class="highlight-title">Do NOT Modify Auto-Provisioned NSG Rules</h3>
+                    <p>
+                        Do <strong>NOT</strong> delete or modify the auto-provisioned NSG rules. They are
+                        managed by Azure Databricks via subnet delegation. Use a separate NSG if you need
+                        custom rules.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 5. NAT Gateway Configuration -->
+            <section class="content-section">
+                <h2 class="section-heading">NAT Gateway Configuration</h2>
+                <p>
+                    A NAT Gateway provides a stable, predictable egress IP address for outbound traffic from
+                    your Databricks clusters. This is essential for firewall allowlisting and downstream service
+                    access control. After <strong>March 31, 2026</strong>, new Azure VNets will require an explicit
+                    outbound connectivity method &mdash; default outbound access will be retired. NAT Gateway is
+                    the recommended solution for VNet-injected Databricks workspaces with SCC enabled.
+                </p>
+
+                <h3 class="subsection">Configuration Requirements</h3>
+                <ul>
+                    <li>Associate the NAT Gateway with <strong>both</strong> the host subnet and the container subnet.</li>
+                    <li>Use a <strong>Standard SKU public IP</strong> for predictable, stable egress.</li>
+                    <li>A single NAT Gateway can serve both subnets in the same workspace.</li>
+                </ul>
+
+                <h3 class="subsection">Benefits</h3>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3 class="card-title">Stable Egress IP</h3>
+                        <p class="card-text">
+                            Provides a fixed public IP for all outbound traffic, making it easy to allowlist
+                            in downstream firewalls and third-party services.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">SNAT Port Management</h3>
+                        <p class="card-text">
+                            NAT Gateway handles SNAT port allocation automatically, avoiding port exhaustion
+                            issues that can occur with Azure Load Balancer default SNAT.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Required for SCC + VNet Injection</h3>
+                        <p class="card-text">
+                            With SCC and VNet injection, cluster nodes have no public IPs. NAT Gateway is the
+                            supported method for outbound internet connectivity. Required for new VNets after
+                            March 2026.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Private Link Options -->
+            <section class="content-section">
+                <h2 class="section-heading">Private Link Options</h2>
+                <p>
+                    Azure Databricks supports three types of Private Link connectivity, each securing a different
+                    communication path. These can be combined for maximum network isolation.
+                </p>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="card-icon green">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Inbound (Front-end) Private Link</h3>
+                        <p class="card-text">
+                            Secures user and API access to the workspace. Requires a <code>databricks_ui_api</code>
+                            private endpoint plus a <code>browser_authentication</code> endpoint for SSO.
+                            Set <code>publicNetworkAccess: Disabled</code> and
+                            <code>requiredNsgRules: NoAzureDatabricksRules</code>.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon teal">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Classic (Back-end) Private Link</h3>
+                        <p class="card-text">
+                            Secures control-plane-to-cluster connectivity via a private endpoint instead of the
+                            SCC relay. The private endpoint replaces the public relay path, keeping all management
+                            traffic within the Azure backbone via private networking.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Outbound (Serverless) Private Link</h3>
+                        <p class="card-text">
+                            Secures serverless compute access to customer Azure resources. Uses Network
+                            Connectivity Configurations (NCCs) to establish private connectivity from
+                            Databricks-managed serverless infrastructure to your data sources.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="highlight-box-blue">
+                    <h3 class="highlight-title">Combine SCC with Private Link for Complete Isolation</h3>
+                    <p>
+                        You can combine SCC with Private Link for complete isolation. Front-end Private Link +
+                        Back-end Private Link + SCC gives maximum network security. This eliminates all public
+                        network paths for both user access and control plane communication.
+                    </p>
+                </div>
+            </section>
+
+            <!-- 7. Service Endpoints -->
+            <section class="content-section">
+                <h2 class="section-heading">Service Endpoints</h2>
+                <p>
+                    Service endpoints on Databricks subnets enable optimized, direct connectivity to Azure
+                    platform services over the Azure backbone network. The following service endpoints should
+                    be configured on both the host and container subnets.
+                </p>
+
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Service Endpoint</th>
+                                <th>Purpose</th>
+                                <th>Required</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Microsoft.Storage</code></td>
+                                <td>DBFS root storage and artifact store access</td>
+                                <td><strong>Yes</strong></td>
+                            </tr>
+                            <tr>
+                                <td><code>Microsoft.Sql</code></td>
+                                <td>Hive metastore and system tables</td>
+                                <td><strong>Yes</strong></td>
+                            </tr>
+                            <tr>
+                                <td><code>Microsoft.EventHub</code></td>
+                                <td>Log delivery and structured streaming</td>
+                                <td><strong>Yes</strong></td>
+                            </tr>
+                            <tr>
+                                <td><code>Microsoft.KeyVault</code></td>
+                                <td>Secret management and key-backed encryption</td>
+                                <td>Optional</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 8. Best Practices -->
+            <section class="content-section">
+                <h2 class="section-heading">Best Practices</h2>
+                <p>Follow this checklist to ensure a secure, well-architected Databricks network deployment.</p>
+
+                <ul class="check-list">
+                    <li>Always use <strong>Premium tier</strong> for full SCC + Private Link support</li>
+                    <li>Size subnets for growth &mdash; <code>/24</code> recommended over <code>/26</code></li>
+                    <li>Deploy <strong>NAT Gateway</strong> on both host and container subnets</li>
+                    <li>Use <strong>separate NSGs</strong> (one per workspace recommended)</li>
+                    <li>Enable SCC (<code>enableNoPublicIp = true</code>) on all workspaces</li>
+                    <li>Plan for <strong>Private Link</strong> if compliance requires no public access</li>
+                    <li>Test with a <strong>small cluster</strong> before production deployment</li>
+                    <li>Document your <strong>CIDR allocations</strong> &mdash; subnets cannot be resized after deployment</li>
+                </ul>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="cta-section">
+                <h2>Ready to deploy?</h2>
+                <p>Follow the step-by-step deployment guide to implement this network design with Bicep or Terraform.</p>
+                <div class="cta-buttons">
+                    <a href="deployment-guide.html" class="btn btn-primary btn-lg">Deployment Guide</a>
+                    <a href="architecture.html" class="btn btn-secondary btn-lg">Review Architecture</a>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="site-footer">
+            <p>&copy; 2025 Azure Databricks SCC Demo. Built for customer demonstrations.</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

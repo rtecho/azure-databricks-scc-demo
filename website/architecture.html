@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture — Azure Databricks SCC Demo</title>
+    <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>Databricks SCC</h2>
+            <span>Secure Cluster Connectivity</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html">Home</a>
+            <a href="why-scc.html">Why SCC</a>
+            <a href="architecture.html" class="active">Architecture</a>
+            <a href="network-design.html">Network Design</a>
+            <a href="deployment-guide.html">Deployment Guide</a>
+            <a href="comparison.html">Comparison</a>
+        </nav>
+        <div class="sidebar-footer"><p>Azure Databricks Demo</p></div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="site-header">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">&#9776;</button>
+            <span class="header-title">Architecture</span>
+        </header>
+
+        <main class="content">
+
+            <!-- 1. Hero Section -->
+            <section class="hero-section">
+                <h1 class="hero-heading">Architecture Deep Dive</h1>
+                <p class="hero-tagline">Understand how Secure Cluster Connectivity changes Azure Databricks networking</p>
+            </section>
+
+            <!-- 2. High-Level Architecture Diagram -->
+            <section class="content-section">
+                <h2 class="section-heading">High-Level Architecture</h2>
+                <div class="mermaid">
+graph TB
+    subgraph "Databricks Control Plane (Databricks-managed)"
+        WA["Web Application<br/>& REST API"]
+        CM["Cluster Manager"]
+        RELAY["SCC Relay<br/>(Port 443)"]
+    end
+
+    subgraph "Customer Azure Subscription"
+        subgraph "Resource Group"
+            subgraph "VNet (Customer-managed)"
+                subgraph "Host Subnet (Public Subnet)"
+                    VM1["Cluster Node 1<br/>No Public IP"]
+                    VM2["Cluster Node 2<br/>No Public IP"]
+                end
+                subgraph "Container Subnet (Private Subnet)"
+                    C1["Container 1"]
+                    C2["Container 2"]
+                end
+            end
+            NAT["NAT Gateway<br/>Stable Egress IP"]
+            subgraph "Managed Resource Group"
+                DISK["Managed Disks"]
+                NIC["Network Interfaces"]
+            end
+        end
+        DBFS["DBFS Storage<br/>(Azure Blob)"]
+    end
+
+    USER["Users / Clients"] -->|HTTPS 443| WA
+    CM -->|Commands via| RELAY
+    VM1 -->|"Outbound HTTPS 443<br/>(Initiated by cluster)"| RELAY
+    VM2 -->|"Outbound HTTPS 443<br/>(Initiated by cluster)"| RELAY
+    VM1 --- C1
+    VM2 --- C2
+    VM1 -->|Egress| NAT
+    VM2 -->|Egress| NAT
+    VM1 -->|"Service Endpoint"| DBFS
+                </div>
+            </section>
+
+            <!-- 3. Control Plane vs Compute Plane -->
+            <section class="content-section">
+                <h2 class="section-heading">Control Plane vs Compute Plane</h2>
+                <p>Azure Databricks separates infrastructure into two distinct planes. Understanding each plane's role is essential to understanding how SCC secures the architecture.</p>
+                <div class="table-wrapper">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Aspect</th>
+                                <th>Control Plane</th>
+                                <th>Compute Plane</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Managed by</strong></td>
+                                <td>Databricks (Microsoft-managed)</td>
+                                <td>Customer (in customer subscription)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Contains</strong></td>
+                                <td>Web app, REST API, cluster manager, job scheduler, notebooks</td>
+                                <td>Spark driver &amp; executors, DBFS mount, cluster VMs</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Network</strong></td>
+                                <td>Databricks-managed VNet</td>
+                                <td>Customer VNet (with VNet injection)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Public IPs</strong></td>
+                                <td>Yes (service endpoints)</td>
+                                <td>No (with SCC enabled)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Inbound ports</strong></td>
+                                <td>443 (HTTPS for users)</td>
+                                <td>None (with SCC)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Communication</strong></td>
+                                <td>Sends commands via SCC relay</td>
+                                <td>Initiates outbound connection to relay</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. Data Flow with SCC -->
+            <section class="content-section">
+                <h2 class="section-heading">Data Flow with SCC</h2>
+                <p>The following steps describe the end-to-end data and control flow when Secure Cluster Connectivity is enabled.</p>
+                <ol class="steps-list">
+                    <li>
+                        <strong>User Access</strong> &mdash; Users connect to the Databricks workspace URL via HTTPS (443). This goes to the control plane.
+                    </li>
+                    <li>
+                        <strong>Cluster Creation</strong> &mdash; Control plane instructs Azure to provision VMs in the customer's VNet. VMs get private IPs only (no public IPs).
+                    </li>
+                    <li>
+                        <strong>Relay Connection</strong> &mdash; Each cluster node initiates an outbound HTTPS connection to the SCC relay endpoint on port 443. Uses a different IP than the web app.
+                    </li>
+                    <li>
+                        <strong>Command Tunnel</strong> &mdash; The control plane sends cluster administration commands (start, stop, configure) through the relay tunnel. No direct SSH needed.
+                    </li>
+                    <li>
+                        <strong>Data Access</strong> &mdash; Cluster nodes access data sources (DBFS, ADLS, SQL) via service endpoints or private endpoints within the VNet.
+                    </li>
+                    <li>
+                        <strong>Egress</strong> &mdash; For internet-bound traffic, the NAT Gateway provides a stable egress IP. All Azure-bound traffic stays on the backbone.
+                    </li>
+                </ol>
+            </section>
+
+            <!-- 5. Network Flow Diagram -->
+            <section class="content-section">
+                <h2 class="section-heading">Network Flow Diagram</h2>
+                <p>This sequence diagram illustrates the traffic flow between components when SCC is active.</p>
+                <div class="mermaid">
+sequenceDiagram
+    participant User as User/Client
+    participant CP as Control Plane
+    participant Relay as SCC Relay
+    participant Node as Cluster Node<br/>(No Public IP)
+    participant NAT as NAT Gateway
+    participant Data as Data Sources<br/>(ADLS/SQL)
+
+    User->>CP: HTTPS (443) — Workspace Access
+    CP->>CP: Schedule cluster creation
+    Note over Node: VM provisioned with<br/>private IP only
+    Node->>Relay: Outbound HTTPS (443)<br/>Cluster registers with relay
+    CP->>Relay: Send management command
+    Relay->>Node: Forward command via tunnel
+    Node->>Data: Access data via<br/>service endpoint
+    Node->>NAT: Internet-bound egress
+    NAT->>NAT: Stable public IP
+                </div>
+            </section>
+
+            <!-- 6. Managed Resource Group -->
+            <section class="content-section">
+                <h2 class="section-heading">Managed Resource Group</h2>
+                <p>
+                    When you create an Azure Databricks workspace, the service automatically creates a
+                    <strong>managed resource group</strong> with the naming convention
+                    <code>databricks-rg-{workspace}-{unique}</code>. This resource group is fully managed
+                    by the Databricks platform and exists within your Azure subscription.
+                </p>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3 class="card-title">What It Contains</h3>
+                        <p class="card-text">
+                            The managed resource group holds the infrastructure for your clusters: virtual machines (VMs),
+                            managed disks, network interfaces (NICs), and network security groups (NSGs) for cluster nodes.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Customer Restrictions</h3>
+                        <p class="card-text">
+                            Customers cannot modify, delete, or add resources in the managed resource group. Azure
+                            Policy deny assignments prevent changes. Databricks manages the full lifecycle of these resources.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">VNet Injection Behavior</h3>
+                        <p class="card-text">
+                            With VNet injection, cluster VMs are placed in the customer's own VNet subnets (host and
+                            container subnets) but are still tracked and managed within the managed resource group.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. Key Architecture Decisions -->
+            <section class="content-section">
+                <h2 class="section-heading">Key Architecture Decisions</h2>
+
+                <div class="highlight-box highlight-green">
+                    <p>
+                        SCC is enabled via <code>enableNoPublicIp = true</code> in the workspace properties.
+                        This is the single toggle that activates the entire secure connectivity model.
+                    </p>
+                </div>
+
+                <div class="highlight-box-blue">
+                    <p>
+                        Two subnets are required for VNet injection: a host subnet (public) and a container subnet
+                        (private). Both must be delegated to <code>Microsoft.Databricks/workspaces</code>.
+                        Minimum size /26 each.
+                    </p>
+                </div>
+
+                <div class="highlight-box">
+                    <p>
+                        NAT Gateway is strongly recommended for VNet injection with SCC to provide stable egress
+                        IPs. After March 31, 2026, new Azure VNets will require explicit outbound connectivity methods.
+                    </p>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="site-footer">
+            <p>&copy; 2025 Azure Databricks SCC Demo. Built for customer demonstrations.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="js/app.js"></script>
+    <script>mermaid.initialize({startOnLoad:true, theme:'default'});</script>
+</body>
+</html>
